@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consulta CNPJ</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --card:#fff; --text:#1b1f24; --muted:#5f6b7a; --line:#e3e6ea;
+    --accent:#2563eb; --accent-soft:#e8efff;
+    --ok:#15803d; --ok-bg:#dcfce7; --bad:#b91c1c; --bad-bg:#fee2e2; --warn:#a16207; --warn-bg:#fef3c7;
+    --radius:14px; --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1115; --card:#181b21; --text:#e8eaed; --muted:#9aa4b2; --line:#2a2f37;
+      --accent:#6b9bff; --accent-soft:#1d2740;
+      --ok:#4ade80; --ok-bg:#12301e; --bad:#f87171; --bad-bg:#3a1515; --warn:#fbbf24; --warn-bg:#3a2e10;
+      --shadow:none;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 16px 60px}
+  header h1{margin:0 0 4px;font-size:26px}
+  header p{margin:0 0 20px;color:var(--muted)}
+  form{display:flex;gap:10px;flex-wrap:wrap}
+  input{flex:1 1 260px;font:inherit;font-size:20px;letter-spacing:.5px;padding:12px 16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);color:var(--text);outline:none}
+  input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:12px 24px;font-size:16px;border-radius:var(--radius)}
+  button:disabled{opacity:.6;cursor:wait}
+  .hist{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 0;min-height:10px}
+  .chip{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--accent-soft);border:none;color:var(--accent)}
+  .msg{margin-top:20px;padding:14px 16px;border-radius:var(--radius)}
+  .msg.err{background:var(--bad-bg);color:var(--bad)}
+  .msg.info{background:var(--warn-bg);color:var(--warn)}
+  #out{margin-top:24px}
+  .hero{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line);padding:20px;margin-bottom:16px}
+  .hero h2{margin:0;font-size:22px}
+  .hero .fantasia{color:var(--muted);margin-top:2px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .badge{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+  .badge.ok{background:var(--ok-bg);color:var(--ok)} .badge.bad{background:var(--bad-bg);color:var(--bad)} .badge.warn{background:var(--warn-bg);color:var(--warn)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--line);padding:18px}
+  .card.full{grid-column:1/-1}
+  .card h3{margin:0 0 12px;font-size:15px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  dl{margin:0;display:grid;grid-template-columns:minmax(110px,40%) 1fr;gap:8px 12px}
+  dt{color:var(--muted);font-size:13px;padding-top:2px}
+  dd{margin:0;word-break:break-word;display:flex;gap:6px;align-items:flex-start}
+  dd .v{flex:1}
+  .cp{border:none;background:none;padding:0 2px;font-size:13px;opacity:.45;line-height:1.4}
+  .cp:hover{opacity:1}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:500;font-size:13px}
+  .code{font-family:ui-monospace,Consolas,monospace;font-size:13px;white-space:nowrap}
+  .list{margin:0;padding:0;list-style:none}
+  .list li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:10px}
+  .list li:last-child{border:none}
+  a{color:var(--accent)}
+  .muted{color:var(--muted)}
+  .src{margin-top:18px;font-size:12px;color:var(--muted);text-align:center}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .sk{height:16px;border-radius:6px;background:linear-gradient(90deg,var(--line),var(--bg),var(--line));background-size:200% 100%;animation:sh 1.2s infinite;margin:10px 0}
+  @keyframes sh{to{background-position:-200% 0}}
+  .tablewrap{overflow-x:auto}
+  @media print{
+    body{background:#fff;color:#000}
+    form,.hist,.actions,.cp,.toast,header p{display:none!important}
+    .card,.hero{box-shadow:none;break-inside:avoid;border:1px solid #ccc}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔎 Consulta CNPJ</h1>
+    <p>Dados públicos da Receita Federal: cadastro, atividades, endereço, Simples/MEI e quadro societário.</p>
+  </header>
+
+  <form id="f" autocomplete="off">
+    <input id="cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" maxlength="18" aria-label="CNPJ" autofocus>
+    <button class="primary" id="go" type="submit">Consultar</button>
+  </form>
+  <div class="hist" id="hist"></div>
+  <div id="msg"></div>
+  <div id="out"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const HIST_KEY = "cnpj_hist_v1";
+let atual = null;
+
+/* ---------- CNPJ ---------- */
+const limparCnpj = v => String(v || "").replace(/\D/g, "").slice(0, 14);
+function formatarCnpj(v){
+  const d = limparCnpj(v);
+  return d.replace(/^(\d{2})(\d)/, "$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+          .replace(/\.(\d{3})(\d)/, ".$1/$2").replace(/(\d{4})(\d)/, "$1-$2");
+}
+function validarCnpj(v){
+  const c = limparCnpj(v);
+  if (c.length !== 14 || /^(\d)\1+$/.test(c)) return false;
+  const dv = n => {
+    let soma = 0, peso = n - 7;
+    for (let i = 0; i < n; i++){ soma += +c[i] * peso--; if (peso < 2) peso = 9; }
+    const r = soma % 11; return r < 2 ? 0 : 11 - r;
+  };
+  return dv(12) === +c[12] && dv(13) === +c[13];
+}
+
+/* ---------- formatação ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const vazio = v => v === null || v === undefined || String(v).trim() === "" || v === "0";
+function dataBR(v){
+  if (!v) return "";
+  const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(v);
+}
+function moeda(v){
+  const n = Number(String(v).replace(",", "."));
+  return isNaN(n) ? String(v) : n.toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+}
+const cep = v => { const d = String(v || "").replace(/\D/g, ""); return d.length === 8 ? d.replace(/(\d{5})(\d{3})/, "$1-$2") : d; };
+function telefone(v){
+  const d = String(v || "").replace(/\D/g, "");
+  if (d.length < 10) return d || "";
+  return d.replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3");
+}
+function idade(dataIso){
+  if (!dataIso) return "";
+  const ini = new Date(dataIso + "T00:00:00"), hoje = new Date();
+  let a = hoje.getFullYear() - ini.getFullYear(), m = hoje.getMonth() - ini.getMonth();
+  if (hoje.getDate() < ini.getDate()) m--;
+  if (m < 0){ a--; m += 12; }
+  return a > 0 ? `${a} ano${a > 1 ? "s" : ""}${m ? ` e ${m} ${m > 1 ? "meses" : "mês"}` : ""}` : `${m} ${m === 1 ? "mês" : "meses"}`;
+}
+const cnaeFmt = c => { const d = String(c || "").replace(/\D/g, "").padStart(7, "0"); return d.replace(/^(\d{4})(\d)(\d{2})$/, "$1-$2/$3"); };
+const simNao = v => v === true || v === "Sim" || v === "S" ? "Sim" : v === false || v === "Não" || v === "N" ? "Não" : (v ?? "");
+
+/* ---------- APIs ---------- */
+async function getJson(url, ms = 12000){
+  const ctrl = new AbortController(), t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, {signal: ctrl.signal});
+    if (!r.ok){ const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+const buscarBrasilApi = c => getJson(`https://brasilapi.com.br/api/cnpj/v1/${c}`);
+const buscarCnpjWs = c => getJson(`https://publica.cnpj.ws/cnpj/${c}`);
+
+/* ---------- normalização ---------- */
+function normalizar(a, b){
+  a = a || {}; b = b || {};
+  const e = b.estabelecimento || {}, s = b.simples || {};
+  const pick = (...vals) => vals.find(v => !vazio(v)) ?? "";
+  const tels = [];
+  [[a.ddd_telefone_1], [a.ddd_telefone_2], [(e.ddd1||"") + (e.telefone1||"")], [(e.ddd2||"") + (e.telefone2||"")]]
+    .forEach(([t]) => { const d = String(t || "").replace(/\D/g, ""); if (d.length >= 10 && !tels.includes(d)) tels.push(d); });
+  const fax = String(a.ddd_fax || ((e.ddd_fax||"") + (e.fax||""))).replace(/\D/g, "");
+
+  const secA = (a.cnaes_secundarios || []).filter(x => x && x.codigo).map(x => ({codigo: x.codigo, descricao: x.descricao}));
+  const secB = (e.atividades_secundarias || []).map(x => ({codigo: x.subclasse || x.id, descricao: x.descricao}));
+
+  const socios = (a.qsa && a.qsa.length) ? a.qsa.map(q => ({
+      nome: q.nome_socio, documento: q.cnpj_cpf_do_socio, qualificacao: q.qualificacao_socio,
+      entrada: q.data_entrada_sociedade, faixa: q.faixa_etaria, pais: q.pais,
+      representante: q.nome_representante_legal, qualRep: q.qualificacao_representante_legal
+    })) : (b.socios || []).map(q => ({
+      nome: q.nome, documento: q.cpf_cnpj_socio, qualificacao: q.qualificacao_socio?.descricao,
+      entrada: q.data_entrada, faixa: q.faixa_etaria, pais: q.pais?.nome,
+      representante: q.nome_representante, qualRep: q.qualificacao_representante?.descricao
+    }));
+
+  const tipoLog = pick(a.descricao_tipo_de_logradouro, e.tipo_logradouro);
+  const log = pick(a.logradouro, e.logradouro);
+
+  return {
+    cnpj: limparCnpj(pick(a.cnpj, e.cnpj)),
+    razao: pick(a.razao_social, b.razao_social),
+    fantasia: pick(a.nome_fantasia, e.nome_fantasia),
+    situacao: pick(a.descricao_situacao_cadastral, e.situacao_cadastral),
+    dataSituacao: pick(a.data_situacao_cadastral, e.data_situacao_cadastral),
+    motivoSituacao: pick(a.descricao_motivo_situacao_cadastral, e.motivo_situacao_cadastral?.descricao),
+    situacaoEspecial: pick(a.situacao_especial, e.situacao_especial),
+    dataSituacaoEspecial: pick(a.data_situacao_especial, e.data_situacao_especial),
+    tipo: pick(a.descricao_identificador_matriz_filial, e.tipo),
+    abertura: pick(a.data_inicio_atividade, e.data_inicio_atividade),
+    natureza: pick(a.codigo_natureza_juridica ? `${a.codigo_natureza_juridica} - ${a.natureza_juridica}` : a.natureza_juridica,
+                   b.natureza_juridica ? `${b.natureza_juridica.id || ""} - ${b.natureza_juridica.descricao}` : ""),
+    porte: pick(a.porte, a.descricao_porte, b.porte?.descricao),
+    capital: pick(a.capital_social, b.capital_social),
+    qualResponsavel: pick(b.qualificacao_do_responsavel?.descricao,
+                          typeof a.qualificacao_do_responsavel === "string" && isNaN(a.qualificacao_do_responsavel) ? a.qualificacao_do_responsavel : ""),
+    efr: pick(a.ente_federativo_responsavel, b.ente_federativo_responsavel),
+    simples: pick(simNao(a.opcao_pelo_simples), simNao(s.simples)),
+    dataSimples: pick(a.data_opcao_pelo_simples, s.data_opcao_simples),
+    exclusaoSimples: pick(a.data_exclusao_do_simples, s.data_exclusao_simples),
+    mei: pick(simNao(a.opcao_pelo_mei), simNao(s.mei)),
+    dataMei: pick(a.data_opcao_pelo_mei, s.data_opcao_mei),
+    exclusaoMei: pick(a.data_exclusao_do_mei, s.data_exclusao_mei),
+    regimes: (a.regime_tributario || []).slice().sort((x, y) => y.ano - x.ano),
+    ies: (e.inscricoes_estaduais || []).map(i => ({ie: i.inscricao_estadual, uf: i.estado?.sigla, ativo: i.ativo, atualizado: i.atualizado_em})),
+    cnaePrincipal: a.cnae_fiscal ? {codigo: a.cnae_fiscal, descricao: a.cnae_fiscal_descricao}
+                  : e.atividade_principal ? {codigo: e.atividade_principal.subclasse || e.atividade_principal.id, descricao: e.atividade_principal.descricao} : null,
+    cnaesSec: secA.length ? secA : secB,
+    endereco: {
+      logradouro: [tipoLog && !String(log).toUpperCase().startsWith(String(tipoLog).toUpperCase()) ? tipoLog : "", log].filter(Boolean).join(" "),
+      numero: pick(a.numero, e.numero), complemento: pick(a.complemento, e.complemento),
+      bairro: pick(a.bairro, e.bairro), cep: pick(a.cep, e.cep),
+      municipio: pick(a.municipio, e.cidade?.nome), uf: pick(a.uf, e.estado?.sigla),
+      ibge: pick(a.codigo_municipio_ibge, e.cidade?.ibge_id), pais: pick(a.pais, e.pais?.nome)
+    },
+    telefones: tels, fax: fax.length >= 10 ? fax : "",
+    email: String(pick(a.email, e.email)).toLowerCase(),
+    socios,
+    fontes: [a.cnpj ? "BrasilAPI" : null, b.razao_social ? "CNPJ.ws" : null].filter(Boolean),
+    atualizadoEm: e.atualizado_em || b.atualizado_em || ""
+  };
+}
+
+/* ---------- render ---------- */
+function linha(rotulo, valor, {html = false, copy = true} = {}){
+  if (vazio(valor)) return "";
+  const txt = html ? "" : String(valor);
+  return `<dt>${esc(rotulo)}</dt><dd><span class="v">${html ? valor : esc(valor)}</span>${copy && !html ? `<button class="cp" title="Copiar" data-copy="${esc(txt)}">📋</button>` : ""}</dd>`;
+}
+const card = (titulo, corpo, cls = "") => corpo.trim() ? `<section class="card ${cls}"><h3>${titulo}</h3>${corpo}</section>` : "";
+function classeSituacao(s){
+  s = String(s).toUpperCase();
+  return s.includes("ATIVA") ? "ok" : s.includes("BAIXADA") || s.includes("NULA") ? "bad" : "warn";
+}
+
+function renderizar(d){
+  const en = d.endereco;
+  const endLinha = [en.logradouro, en.numero, en.complemento].filter(x => !vazio(x)).join(", ");
+  const endCompleto = [endLinha, en.bairro, `${en.municipio || ""}${en.uf ? "/" + en.uf : ""}`, en.cep ? "CEP " + cep(en.cep) : ""].filter(x => !vazio(x)).join(" - ");
+  const mapa = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endCompleto)}`;
+
+  const badges = [
+    d.situacao && `<span class="badge ${classeSituacao(d.situacao)}">${esc(d.situacao)}</span>`,
+    d.tipo && `<span class="badge">${esc(d.tipo)}</span>`,
+    d.porte && `<span class="badge">${esc(d.porte)}</span>`,
+    d.mei === "Sim" && `<span class="badge ok">MEI</span>`,
+    d.simples === "Sim" && d.mei !== "Sim" && `<span class="badge ok">Simples Nacional</span>`,
+    d.abertura && `<span class="badge">${esc(idade(d.abertura))} de empresa</span>`
+  ].filter(Boolean).join("");
+
+  const cadastro =
+    linha("CNPJ", formatarCnpj(d.cnpj)) + linha("Razão social", d.razao) + linha("Nome fantasia", d.fantasia) +
+    linha("Abertura", dataBR(d.abertura)) + linha("Natureza jurídica", d.natureza) + linha("Porte", d.porte) +
+    linha("Capital social", d.capital !== "" ? moeda(d.capital) : "") + linha("Qualif. do responsável", d.qualResponsavel) +
+    linha("Ente fed. responsável", d.efr);
+
+  const situacao =
+    linha("Situação", d.situacao) + linha("Data da situação", dataBR(d.dataSituacao)) +
+    linha("Motivo", d.motivoSituacao && !/sem motivo/i.test(d.motivoSituacao) ? d.motivoSituacao : "") +
+    linha("Situação especial", d.situacaoEspecial) + linha("Data sit. especial", dataBR(d.dataSituacaoEspecial));
+
+  let trib = linha("Simples Nacional", d.simples) + linha("Opção pelo Simples", dataBR(d.dataSimples)) +
+    linha("Exclusão do Simples", dataBR(d.exclusaoSimples)) + linha("MEI", d.mei) +
+    linha("Opção pelo MEI", dataBR(d.dataMei)) + linha("Exclusão do MEI", dataBR(d.exclusaoMei));
+  trib = trib ? `<dl>${trib}</dl>` : "";
+  if (d.ies.length){
+    trib += `<h3 style="margin-top:16px">Inscrições estaduais</h3><ul class="list">` + d.ies.map(i =>
+      `<li><span class="code">${esc(i.uf || "")}</span><span class="v" style="flex:1">${esc(i.ie)} <button class="cp" data-copy="${esc(i.ie)}">📋</button></span>
+       <span class="badge ${i.ativo ? "ok" : "bad"}">${i.ativo ? "Ativa" : "Inativa"}</span></li>`).join("") + `</ul>`;
+  }
+  if (d.regimes.length){
+    trib += `<h3 style="margin-top:16px">Regime tributário (histórico)</h3><ul class="list">` + d.regimes.map(r =>
+      `<li><span class="code">${esc(r.ano)}</span><span>${esc(r.forma_de_tributacao)}</span></li>`).join("") + `</ul>`;
+  }
+
+  let ativ = "";
+  if (d.cnaePrincipal) ativ += `<p class="muted" style="margin:0 0 6px;font-size:13px">Principal</p><ul class="list"><li><span class="code">${esc(cnaeFmt(d.cnaePrincipal.codigo))}</span><span>${esc(d.cnaePrincipal.descricao)}</span></li></ul>`;
+  if (d.cnaesSec.length) ativ += `<p class="muted" style="margin:14px 0 6px;font-size:13px">Secundárias (${d.cnaesSec.length})</p><ul class="list">` +
+    d.cnaesSec.map(c => `<li><span class="code">${esc(cnaeFmt(c.codigo))}</span><span>${esc(c.descricao)}</span></li>`).join("") + `</ul>`;
+
+  const endereco = endLinha || en.municipio ? `<dl>` +
+    linha("Logradouro", endLinha) + linha("Bairro", en.bairro) + linha("CEP", cep(en.cep)) +
+    linha("Município/UF", `${en.municipio || ""}${en.uf ? " / " + en.uf : ""}`) + linha("Cód. IBGE", en.ibge) +
+    linha("País", en.pais && !/brasil/i.test(en.pais) ? en.pais : "") +
+    `</dl><div class="actions"><a href="${mapa}" target="_blank" rel="noopener"><button type="button">🗺️ Ver no mapa</button></a>
+     <button type="button" class="cp-btn" data-copy="${esc(endCompleto)}">📋 Copiar endereço</button></div>` : "";
+
+  const contato = (d.telefones.map((t, i) => linha(`Telefone ${d.telefones.length > 1 ? i + 1 : ""}`,
+      `<a href="tel:+55${t}">${esc(telefone(t))}</a> · <a href="https://wa.me/55${t}" target="_blank" rel="noopener">WhatsApp</a> <button class="cp" data-copy="${esc(telefone(t))}">📋</button>`, {html: true})).join("") +
+    linha("Fax", d.fax ? telefone(d.fax) : "") +
+    (d.email ? linha("E-mail", `<a href="mailto:${esc(d.email)}">${esc(d.email)}</a> <button class="cp" data-copy="${esc(d.email)}">📋</button>`, {html: true}) : ""));
+
+  const qsa = d.socios.length ? `<div class="tablewrap"><table><thead><tr><th>Nome</th><th>Qualificação</th><th>Entrada</th><th>Faixa etária</th><th>Documento</th></tr></thead><tbody>` +
+    d.socios.map(s => `<tr><td><strong>${esc(s.nome)}</strong>${s.representante ? `<br><span class="muted" style="font-size:13px">Rep.: ${esc(s.representante)}${s.qualRep ? " (" + esc(s.qualRep) + ")" : ""}</span>` : ""}${s.pais && !/brasil/i.test(s.pais) ? `<br><span class="muted" style="font-size:13px">${esc(s.pais)}</span>` : ""}</td>
+      <td>${esc(s.qualificacao || "")}</td><td class="code">${esc(dataBR(s.entrada))}</td><td>${esc(s.faixa || "")}</td><td class="code">${esc(s.documento || "")}</td></tr>`).join("") +
+    `</tbody></table></div>` : `<p class="muted" style="margin:0">Sem sócios informados (comum em empresário individual e MEI).</p>`;
+
+  $("#out").innerHTML = `
+    <div class="hero">
+      <div class="muted code">${esc(formatarCnpj(d.cnpj))}</div>
+      <h2>${esc(d.razao)}</h2>
+      ${d.fantasia ? `<div class="fantasia">${esc(d.fantasia)}</div>` : ""}
+      <div class="badges">${badges}</div>
+      <div class="actions">
+        <button type="button" id="bResumo">📋 Copiar resumo</button>
+        <button type="button" id="bJson">⬇️ Exportar JSON</button>
+        <button type="button" id="bPrint">🖨️ Imprimir / PDF</button>
+        <button type="button" id="bLink">🔗 Copiar link</button>
+      </div>
+    </div>
+    <div class="grid">
+      ${card("Cadastro", `<dl>${cadastro}</dl>`)}
+      ${card("Situação cadastral", situacao ? `<dl>${situacao}</dl>` : "")}
+      ${card("Endereço", endereco)}
+      ${card("Contato", contato ? `<dl>${contato}</dl>` : "")}
+      ${card("Tributário", trib)}
+      ${card("Atividades econômicas (CNAE)", ativ, "full")}
+      ${card(`Quadro societário${d.socios.length ? ` (${d.socios.length})` : ""}`, qsa, "full")}
+    </div>
+    <div class="src">Fontes: ${esc(d.fontes.join(" + ") || "—")} · dados públicos da Receita Federal${d.atualizadoEm ? ` · atualizado em ${esc(dataBR(d.atualizadoEm))}` : ""}</div>`;
+
+  $("#bResumo").onclick = () => copiar(resumoTexto(d, endCompleto), "Resumo copiado");
+  $("#bJson").onclick = () => {
+    const blob = new Blob([JSON.stringify(d, null, 2)], {type: "application/json"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `cnpj-${d.cnpj}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("#bPrint").onclick = () => window.print();
+  $("#bLink").onclick = () => copiar(location.href.split("?")[0] + "?cnpj=" + d.cnpj, "Link copiado");
+}
+
+function resumoTexto(d, end){
+  const L = (k, v) => vazio(v) ? "" : `${k}: ${v}\n`;
+  return (L("CNPJ", formatarCnpj(d.cnpj)) + L("Razão social", d.razao) + L("Nome fantasia", d.fantasia) +
+    L("Situação", d.situacao + (d.dataSituacao ? ` (desde ${dataBR(d.dataSituacao)})` : "")) + L("Abertura", dataBR(d.abertura)) +
+    L("Natureza jurídica", d.natureza) + L("Porte", d.porte) + L("Capital social", d.capital !== "" ? moeda(d.capital) : "") +
+    L("Simples", d.simples) + L("MEI", d.mei) +
+    L("CNAE principal", d.cnaePrincipal ? `${cnaeFmt(d.cnaePrincipal.codigo)} - ${d.cnaePrincipal.descricao}` : "") +
+    L("Endereço", end) + L("Telefone", d.telefones.map(telefone).join(" / ")) + L("E-mail", d.email) +
+    (d.socios.length ? "Sócios:\n" + d.socios.map(s => `  - ${s.nome} (${s.qualificacao || ""})`).join("\n") + "\n" : "")).trim();
+}
+
+/* ---------- UI ---------- */
+function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 1600); }
+async function copiar(t, msg = "Copiado"){
+  try { await navigator.clipboard.writeText(t); }
+  catch { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  toast(msg);
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (b) copiar(b.dataset.copy); });
+
+const mostrarMsg = (t, tipo = "err") => $("#msg").innerHTML = t ? `<div class="msg ${tipo}">${esc(t)}</div>` : "";
+const skeleton = () => $("#out").innerHTML = `<div class="hero"><div class="sk" style="width:30%"></div><div class="sk" style="width:70%;height:24px"></div><div class="sk" style="width:45%"></div></div>
+  <div class="grid">${'<div class="card"><div class="sk"></div><div class="sk"></div><div class="sk" style="width:60%"></div></div>'.repeat(4)}</div>`;
+
+function historico(){ try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch { return []; } }
+function salvarHist(d){
+  const h = historico().filter(x => x.cnpj !== d.cnpj);
+  h.unshift({cnpj: d.cnpj, nome: d.fantasia || d.razao});
+  localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0, 10)));
+  renderHist();
+}
+function renderHist(){
+  const h = historico();
+  $("#hist").innerHTML = h.map(x => `<button class="chip" data-cnpj="${esc(x.cnpj)}" title="${esc(formatarCnpj(x.cnpj))}">${esc(String(x.nome).slice(0, 28))}</button>`).join("") +
+    (h.length ? `<button class="chip" id="limparHist" title="Limpar histórico">✕</button>` : "");
+}
+$("#hist").addEventListener("click", e => {
+  if (e.target.id === "limparHist"){ localStorage.removeItem(HIST_KEY); renderHist(); return; }
+  const c = e.target.dataset.cnpj; if (c){ $("#cnpj").value = formatarCnpj(c); consultar(c); }
+});
+
+$("#cnpj").addEventListener("input", e => {
+  e.target.value = formatarCnpj(e.target.value);
+  if (limparCnpj(e.target.value).length === 14) consultar(e.target.value);
+});
+
+async function consultar(valor){
+  const c = limparCnpj(valor);
+  if (c.length !== 14){ mostrarMsg("Digite os 14 números do CNPJ."); return; }
+  if (!validarCnpj(c)){ mostrarMsg("CNPJ inválido: os dígitos verificadores não conferem. Confira se digitou certo."); $("#out").innerHTML = ""; return; }
+  if (atual === c) return;
+  atual = c;
+  mostrarMsg(""); skeleton(); $("#go").disabled = true;
+  try {
+    const [ra, rb] = await Promise.allSettled([buscarBrasilApi(c), buscarCnpjWs(c)]);
+    if (atual !== c) return;
+    const a = ra.status === "fulfilled" ? ra.value : null, b = rb.status === "fulfilled" ? rb.value : null;
+    if (!a && !b){
+      const st = [ra.reason?.status, rb.reason?.status];
+      $("#out").innerHTML = "";
+      if (st.includes(404) || st.includes(400)) mostrarMsg("CNPJ não encontrado na base da Receita Federal.");
+      else if (st.includes(429)) mostrarMsg("Muitas consultas em pouco tempo. Aguarde 1 minuto e tente de novo.");
+      else if (!navigator.onLine) mostrarMsg("Sem conexão com a internet.");
+      else mostrarMsg("Não foi possível consultar agora (serviços indisponíveis). Tente novamente em instantes.");
+      return;
+    }
+    const d = normalizar(a, b);
+    renderizar(d); salvarHist(d);
+    history.replaceState(null, "", "?cnpj=" + c);
+    if (!a || !b) mostrarMsg(`Algumas informações podem estar faltando: a fonte ${!a ? "BrasilAPI" : "CNPJ.ws"} não respondeu.`, "info");
+  } catch (err){
+    console.error(err); $("#out").innerHTML = ""; mostrarMsg("Erro inesperado ao montar o resultado.");
+  } finally {
+    if (atual === c){ $("#go").disabled = false; atual = null; }
+  }
+}
+
+$("#f").addEventListener("submit", e => { e.preventDefault(); consultar($("#cnpj").value); });
+
+renderHist();
+const qs = new URLSearchParams(location.search).get("cnpj");
+if (qs){ $("#cnpj").value = formatarCnpj(qs); consultar(qs); }
+</script>
+</body>
+</html>
